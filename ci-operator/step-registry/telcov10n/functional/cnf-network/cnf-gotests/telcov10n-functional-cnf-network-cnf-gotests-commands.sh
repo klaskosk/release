@@ -46,6 +46,28 @@ echo VLAN=$VLAN
 echo "Selected SWITCH_INTERFACES"
 echo SWITCH_INTERFACES=$SWITCH_INTERFACES
 
+echo "Set bastion ssh configuration"
+cat $SHARED_DIR/all | grep ansible_ssh_private_key -A 100 | sed 's/ansible_ssh_private_key: //g' | sed "s/'//g" > $PROJECT_DIR/temp_ssh_key
+chmod 600 $PROJECT_DIR/temp_ssh_key
+BASTION_IP=$(cat $ECO_CI_CD_INVENTORY_PATH/host_vars/bastion | grep -oP '(?<=ansible_host: ).*' | sed "s/'//g")
+BASTION_USER=$(cat $ECO_CI_CD_INVENTORY_PATH/group_vars/all | grep -oP '(?<=ansible_user: ).*'| sed "s/'//g")
+
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${PROJECT_DIR}/temp_ssh_key")
+BASTION="${BASTION_USER}@${BASTION_IP}"
+REMOTE_WORKDIR=""
+cleanup() {
+  if [[ -n "${REMOTE_WORKDIR}" ]]; then
+    ssh "${SSH_OPTS[@]}" "${BASTION}" "rm -rf -- '${REMOTE_WORKDIR}'" || true
+  fi
+  rm -f "${PROJECT_DIR}/temp_ssh_key"
+}
+trap cleanup EXIT
+
+echo "Create a fresh test workspace on the bastion"
+REMOTE_WORKDIR=$(ssh "${SSH_OPTS[@]}" "${BASTION}" mktemp -d /tmp/telcov10n-network-cnf-gotests.XXXXXXXX)
+DOWNSTREAM_REPORT_PATH="${REMOTE_WORKDIR}/downstream_report"
+
 echo "Setup test script"
 cd /eco-ci-cd
 ansible-playbook ./playbooks/cnf/deploy-run-downstream-tests-script.yaml \
@@ -54,37 +76,29 @@ ansible-playbook ./playbooks/cnf/deploy-run-downstream-tests-script.yaml \
     cnf_interfaces=$INTERFACE_LIST \
     switch_interfaces=$SWITCH_INTERFACES \
     metallb_vlans=$VLAN \
-    downstream_test_report_path=/tmp/downstream_report"
+    downstream_test_dir=${REMOTE_WORKDIR} \
+    downstream_test_report_path=${DOWNSTREAM_REPORT_PATH}"
 
-echo "Set bastion ssh configuration"
-cat $SHARED_DIR/all | grep ansible_ssh_private_key -A 100 | sed 's/ansible_ssh_private_key: //g' | sed "s/'//g" > $PROJECT_DIR/temp_ssh_key
-chmod 600 $PROJECT_DIR/temp_ssh_key
-BASTION_IP=$(cat $ECO_CI_CD_INVENTORY_PATH/host_vars/bastion | grep -oP '(?<=ansible_host: ).*' | sed "s/'//g")
-BASTION_USER=$(cat $ECO_CI_CD_INVENTORY_PATH/group_vars/all | grep -oP '(?<=ansible_user: ).*'| sed "s/'//g")
-
-REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
-trap 'rm -f "${PROJECT_DIR}/temp_ssh_key"' EXIT
 stage_rc=0
 echo "Run cnf-gotests on the bastion and stage suite JUnit reports"
-ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
-  "${BASTION_USER}@${BASTION_IP}" bash -s -- "${REPORT_DIR}" <<'EOF' || stage_rc=$?
+ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 "${SSH_OPTS[@]}" \
+  "${BASTION}" bash -s -- "${REMOTE_WORKDIR}" "${DOWNSTREAM_REPORT_PATH}" "${REPORT_DIR}" <<'EOF' || stage_rc=$?
 set -e
-cd /tmp/cnf-gotests
+cd "$1/cnf-gotests"
 ./downstream-tests-run.sh || true
-mkdir -p -m 0700 "$1"
+mkdir -p -m 0700 "$3"
 shopt -s nullglob
-reports=(/tmp/downstream_report/*_suite_test.xml)
+reports=("$2"/*_suite_test.xml)
 if (( ${#reports[@]} == 0 )); then
   echo "No cnf-gotests suite JUnit reports found" >&2
   exit 1
 fi
 for report in "${reports[@]}"; do
-  cp "$report" "$1/junit_${report##*/}"
+  cp "$report" "$3/junit_${report##*/}"
 done
 EOF
 
 echo "Gather artifacts from bastion"
 mkdir -p "${ARTIFACT_DIR}/junit_downstream"
-scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
-  "${BASTION_USER}@${BASTION_IP}:/tmp/downstream_report/*.xml" "${ARTIFACT_DIR}/junit_downstream/"
+scp "${SSH_OPTS[@]}" "${BASTION}:${DOWNSTREAM_REPORT_PATH}/*.xml" "${ARTIFACT_DIR}/junit_downstream/"
 exit "${stage_rc}"

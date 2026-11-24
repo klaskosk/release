@@ -33,14 +33,14 @@ tests:
       FEATURES: core
       LABELS: net
       METRICS_LIST: general_ocp,sriov,ptp,fec,local_storage
-      REPORTER_LAUNCH_NAME: telco-ft-net-core
+      REPORTER_LAUNCH_NAME: telco-ft-net-core-5.2
       REPORTER_TEMPLATE_NAME: 'Telco Network 5_2 Regression - Telco Network 5.2 Regression
         Testing - Version: <version>; Build: <build>'
       REPORTPORTAL_FILES: .reportportal_url_Net_core
       VERSION: "5.2"
     post:
     - ref: telcov10n-functional-report
-    - ref: telcov10n-verify-junit-reports
+    - ref: telcov10n-verify-junit-reports-bastion
     - ref: telcov10n-functional-cnf-network-clone-z-stream-issue
     - ref: telcov10n-functional-cnf-network-send-slack-notification
     pre:
