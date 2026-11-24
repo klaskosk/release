@@ -35,14 +35,6 @@ chmod 600 "/tmp/temp_ssh_key"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-# Polarion reporting is retired, so report steps no longer write this file.
-# Keep the copy best-effort and fall back to N/A, like the cnf-ran/IBU steps.
-POLARION_URL="N/A"
-if scp -r ${SSH_OPTS} -i /tmp/temp_ssh_key "${BASTION_USER}@${BASTION_IP}":/tmp/.polarion_url "${SHARED_DIR}/polarion_url" 2>/dev/null; then
-  if [[ -f "${SHARED_DIR}/polarion_url" ]] && [[ -s "${SHARED_DIR}/polarion_url" ]]; then
-    POLARION_URL="$(cat "${SHARED_DIR}/polarion_url")"
-  fi
-fi
 scp ${SSH_OPTS} -i /tmp/temp_ssh_key "${BASTION_USER}@${BASTION_IP}:/tmp/${REPORTPORTAL_FILES:-}" "${SHARED_DIR}/reportportal_url" 2>/dev/null || true
 
 
@@ -70,8 +62,6 @@ if [[ -z "$SECONDARY_NIC_FILE" ]]; then
   echo "Error: Secondary NIC file is empty: '$SECONDARY_NIC_FILE'." >&2
   exit 1
 fi
-
-echo "Polarion URL: ${POLARION_URL}"
 
 # Read ReportPortal URL if available
 REPORTPORTAL_URL=""
@@ -116,7 +106,6 @@ cd $SCRIPTS_FOLDER
 python3 $PYTHON_SCRIPT \
   --webhook-url "$WEBHOOK_URL" \
   --version "$Z_STREAM_VERSION" \
-  --polarion-url "$POLARION_URL" \
   --cluster-name "$CLUSTER_NAME" \
   --nic "$NIC" \
   --secondary-nic "$SECONDARY_NIC" \

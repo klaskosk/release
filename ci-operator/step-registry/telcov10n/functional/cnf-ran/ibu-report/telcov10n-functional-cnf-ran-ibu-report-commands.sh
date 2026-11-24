@@ -60,11 +60,11 @@ done
 rm -rf /tmp/reports
 
 mkdir -p /tmp/reports
-# The eco-gotests steps stage their suite JUnit XMLs under the legacy polarion_
-# prefix; those files are the single Report Portal report set.
-for f in "${SHARED_DIR}"/polarion_*.xml; do
+# The IBU test steps stage their suite JUnit XMLs as junit_ibu_seed_* and
+# junit_ibu_upgrade_*; those files are the single Report Portal report set.
+for f in "${SHARED_DIR}"/junit_*.xml; do
   if [[ -f "$f" ]]; then
-    filename=$(basename "$f" | sed 's/^polarion_//')
+    filename=$(basename "$f" | sed 's/^junit_//')
     cp "$f" "/tmp/reports/${filename}"
   fi
 done

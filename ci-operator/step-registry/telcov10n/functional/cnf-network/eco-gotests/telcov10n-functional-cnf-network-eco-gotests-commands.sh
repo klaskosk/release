@@ -94,7 +94,7 @@ scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_
 rm -rf "${PROJECT_DIR}/temp_ssh_key"
 
 echo "Store suite JUnit report for reporter step"
-# Only the Ginkgo suite JUnit XML is reported. report_testrun.xml is a lossy
+# Only the Ginkgo suite JUnit XML is reported. report_*.xml is a lossy
 # aggregate of the same specs, so it is left in ARTIFACT_DIR and not staged.
 for f in "${ARTIFACT_DIR}/junit_eco_gotests/"*suite_test_junit.xml; do
   if [[ -f "$f" ]]; then

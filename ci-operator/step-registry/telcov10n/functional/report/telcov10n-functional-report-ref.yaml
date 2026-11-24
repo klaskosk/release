@@ -6,16 +6,16 @@ ref:
     tag: eco-ci-cd  
   commands: telcov10n-functional-report-commands.sh
   documentation: |-
-    Upload reports to Report Portal.
+    Upload the suite JUnit reports to Report Portal.
 
-    Polarion reporting is retired: junit_report_dir is no longer passed and
-    processed_report_dir is the single report set uploaded to Report Portal.
+    junit_report_dir is no longer passed: processed_report_dir is the single
+    report set uploaded to Report Portal.
 
     Lanes whose plays stage reports on the bastion upload the suite JUnit set
     from JUNIT_REPORT_DIR (default /tmp/test_reports/junit). Lanes whose test
     steps stage reports in SHARED_DIR upload only the staged junit_*.xml suite
-    reports; report_testrun.xml and its report_*/polarion_* copies are skipped
-    because they are a lossy aggregate of the same specs.
+    reports; the report_*.xml aggregates are ignored because they are a lossy
+    duplicate of the same specs.
   grace_period: 10s
   timeout: 4h0m0s
   resources:
@@ -43,9 +43,11 @@ ref:
   - name: REPORTER_LAUNCH_NAME
     default: "telco-ft-ran-standard"
     documentation: |-
-      Report Portal launch name. Include the OCP version (for example
-      telco-ft-ran-ptp-4.22) so launches from different versions do not collide;
-      a trailing -<major>.<minor> is stripped for the metrics ci_lane attribute.
+      Report Portal launch name. Versioned lanes suffix the OCP version
+      (for example telco-ft-ran-ptp-4.22) so launches from different
+      versions do not collide; a trailing -<major>.<minor> is stripped for
+      the metrics ci_lane attribute. The default is the versionless lane
+      name, used by lanes that do not set a version.
   - name: CLUSTER_NAME
     default: "kni-qe-99"
     documentation: Hub cluster name

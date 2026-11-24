@@ -29,13 +29,19 @@ for file in "${PROJECT_DIR}"/artifacts/*; do
   cp "${file}" "${SHARED_DIR}"/
 done
 
-echo "Copy reports for reporter step"
-cp "${PROJECT_DIR}"/artifacts/report_*.xml "${SHARED_DIR}"/
-cp "${PROJECT_DIR}"/artifacts/junit_*.xml "${SHARED_DIR}"/
+echo "Copy suite JUnit reports for reporter step"
+for file in "${PROJECT_DIR}"/artifacts/junit_*.xml; do
+  [[ -f "$file" ]] || continue
+  cp "${file}" "${SHARED_DIR}"/
+done
 
+# The report_*.xml aggregates are ignored: Report Portal gets the suite JUnit
+# set only.
 mkdir "${ARTIFACT_DIR}/junit"
 for file in "${PROJECT_DIR}"/artifacts/*.xml; do
-  [[ $(basename "$file") == "report_polarion.xml" ]] && continue
+  case "$(basename "$file")" in
+    report_*.xml) continue ;;
+  esac
   echo "${file}"
   cp "${file}" "${ARTIFACT_DIR}"/junit/
 done

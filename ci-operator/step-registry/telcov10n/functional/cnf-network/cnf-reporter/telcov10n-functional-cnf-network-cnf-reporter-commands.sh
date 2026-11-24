@@ -32,21 +32,20 @@ fi
 export CLUSTER_NAME="${CLUSTER_NAME}"
 echo CLUSTER_NAME="${CLUSTER_NAME}"
 
-echo "Remove report directories"
+echo "Remove report directory"
 rm -rf /tmp/reports
-rm -rf /tmp/junit
 
 echo "Create reports directory"
 mkdir /tmp/reports
 
-echo "Copy reports to reports directory"
-cp "${SHARED_DIR}"/report_*.xml /tmp/reports/ 2>/dev/null
-
-echo "Create junit directory"
-mkdir /tmp/junit
-
-echo "Copy report to junit directory"
-cp "${SHARED_DIR}"/junit_*.xml /tmp/junit/ 2>/dev/null
+echo "Copy suite JUnit reports to reports directory"
+# Only the Ginkgo suite JUnit XMLs are the Report Portal report set; the
+# report_*.xml aggregates are ignored and never staged into SHARED_DIR.
+for f in "${SHARED_DIR}"/junit_*.xml; do
+  if [[ -f "$f" ]]; then
+    cp "$f" /tmp/reports/
+  fi
+done
 
 echo "Upload reports"
 cd /eco-ci-cd
@@ -54,4 +53,4 @@ cd /eco-ci-cd
 ansible-playbook ./playbooks/upload-report.yaml -i ./inventories/cnf/switch-config.yaml \
     --extra-vars "kubeconfig=/home/telcov10n/project/generated/${CLUSTER_NAME}/auth/kubeconfig \
         reporter_template_name='${REPORTER_TEMPLATE_NAME}' processed_report_dir=/tmp/reports \
-        junit_report_dir=/tmp/junit reports_directory=/tmp/upload"
+        reports_directory=/tmp/upload"

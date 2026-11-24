@@ -78,8 +78,8 @@ rm -rf "${PROJECT_DIR}/temp_ssh_key"
 echo "Store suite JUnit reports for reporter step"
 for suite in "${TEST_SUITES[@]}"; do
   artifact_dir="${ARTIFACT_DIR}/junit_eco_gotests_${suite}"
-  # Only the Ginkgo suite JUnit XMLs are reported. report_testrun.xml is a lossy
-  # aggregate of the same specs, so it is left in ARTIFACT_DIR and not staged.
+  # Only the Ginkgo suite JUnit XMLs are reported. The report_*.xml aggregate
+  # is a lossy duplicate of the same specs, so it is left in ARTIFACT_DIR.
   for f in "${artifact_dir}"/*suite_test_junit.xml; do
     if [[ -f "$f" ]]; then
       cp "$f" "${SHARED_DIR}/junit_${suite}_suite_test_junit.xml"

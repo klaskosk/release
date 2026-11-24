@@ -43,11 +43,11 @@ mkdir -pv /tmp/reports
 # Reports are either staged in SHARED_DIR by the test steps or produced on the
 # bastion by the lane's plays. Either way Report Portal gets a single report set.
 #
-# Only the Ginkgo suite JUnit XMLs are that set. report_testrun.xml is a lossy
-# aggregate of the same specs, so the report_*/polarion_* copies of it are never
-# uploaded even when a lane still stages them.
+# Only the Ginkgo suite JUnit XMLs are that set. The report_*.xml aggregates
+# are ignored entirely, so a lane that stages nothing but aggregates is treated
+# as having no reports in SHARED_DIR.
 reports_in_shared_dir=false
-for f in "${SHARED_DIR}"/*polarion*.xml "${SHARED_DIR}"/report_*.xml "${SHARED_DIR}"/junit_*.xml; do
+for f in "${SHARED_DIR}"/junit_*.xml; do
   if [[ -f "$f" ]]; then
     reports_in_shared_dir=true
     break

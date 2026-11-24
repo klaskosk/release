@@ -37,21 +37,18 @@ fi
 export CLUSTER_NAME="${CLUSTER_NAME}"
 echo "CLUSTER_NAME=${CLUSTER_NAME}"
 
-echo "Remove report directories"
+echo "Remove report directory"
 rm -rf /tmp/reports
-rm -rf /tmp/junit
 
 echo "Create reports directory"
 mkdir -pv /tmp/reports
 
-echo "Copy reports to reports directory"
-cp "${SHARED_DIR}"/junit_*.xml /tmp/reports/ 2>/dev/null || echo "No report_*.xml files found"
-
-echo "Create junit directory"
-mkdir -pv /tmp/junit
-
-echo "Copy junit reports to junit directory"
-cp "${SHARED_DIR}"/junit_*.xml /tmp/junit/ 2>/dev/null || echo "No junit_*.xml files found"
+echo "Copy suite JUnit reports to reports directory"
+for f in "${SHARED_DIR}"/junit_*.xml; do
+  if [[ -f "$f" ]]; then
+    cp "$f" /tmp/reports/
+  fi
+done
 
 echo "Upload cnf-compute-nto test reports"
 cd /eco-ci-cd
@@ -59,6 +56,6 @@ cd /eco-ci-cd
 ansible-playbook ./playbooks/upload-report.yaml -i ./inventories/ocp-deployment/build-inventory.py \
     --extra-vars "kubeconfig=/home/telcov10n/project/generated/${CLUSTER_NAME}/auth/kubeconfig \
         reporter_template_name='${REPORTER_TEMPLATE_NAME}' processed_report_dir=/tmp/reports \
-        junit_report_dir=/tmp/junit reports_directory=/tmp/upload"
+        reports_directory=/tmp/upload"
 
 echo "Compute-NTO reporting completed successfully" 

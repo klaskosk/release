@@ -60,8 +60,8 @@ done
 rm -rf /tmp/reports
 
 mkdir -p /tmp/reports
-# Only the suite JUnit XMLs are uploaded. The polarion_* files are copies of
-# report_testrun.xml, a lossy aggregate of the same specs, so they are skipped.
+# Only the suite JUnit XMLs are uploaded. The report_*.xml aggregates are a
+# lossy duplicate of the same specs, so they are never uploaded.
 for f in "${SHARED_DIR}"/junit_*.xml; do
   if [[ -f "$f" ]]; then
     filename=$(basename "$f" | sed 's/^junit_//')

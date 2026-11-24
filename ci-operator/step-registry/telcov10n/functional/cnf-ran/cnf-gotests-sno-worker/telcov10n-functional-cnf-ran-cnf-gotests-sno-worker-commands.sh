@@ -287,7 +287,7 @@ echo "Copy suite JUnit reports to SHARED_DIR"
 for f in "${ARTIFACT_DIR}"/junit_downstream/*.xml; do
   if [[ -f "$f" ]]; then
     filename=$(basename "$f")
-    if [[ "$filename" == *_suite_test.xml ]] && [[ "$filename" != *_polarion.xml ]]; then
+    if [[ "$filename" == *_suite_test.xml ]] && [[ "$filename" != report_*.xml ]]; then
       echo "Copying junit report: $filename -> junit_${filename}"
       cp "$f" "${SHARED_DIR}/junit_${filename}"
     fi
