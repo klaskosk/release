@@ -65,6 +65,9 @@ if [ ! -f "${ARTIFACT_DIR}/junit_metallb/junit-report.xml" ]; then
 fi
 
 echo "Store report for reporter step"
-cp "${ARTIFACT_DIR}/junit_metallb/junit-report.xml" "${SHARED_DIR}/junit_metallb_report.xml"
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${PROJECT_DIR}/temp_ssh_key" \
+    "${BASTION_USER}@${BASTION_IP}" \
+    "mkdir -p -m 0700 '${REPORT_DIR}' && cp /tmp/metallbreport/junit-report.xml '${REPORT_DIR}/junit_metallb_report.xml'"
 
 rm -f "${PROJECT_DIR}/temp_ssh_key"

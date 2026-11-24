@@ -25,17 +25,19 @@ if [ -f "${SHARED_DIR}/skip.txt" ]; then
 fi
 
 
-BASTION_IP=$(grep -oP '(?<=ansible_host: ).*' "${SHARED_DIR}/bastion" | sed "s/'//g")
-BASTION_USER=$(grep -oP '(?<=ansible_user: ).*' "${SHARED_DIR}/all" | sed "s/'//g")
+if [[ -f "${SHARED_DIR}/report_portal_uploaded" ]]; then
+  BASTION_IP=$(grep -oP '(?<=ansible_host: ).*' "${SHARED_DIR}/bastion" | sed "s/'//g")
+  BASTION_USER=$(grep -oP '(?<=ansible_user: ).*' "${SHARED_DIR}/all" | sed "s/'//g")
 
-echo "Set bastion ssh configuration"
-grep ansible_ssh_private_key -A 100 "${SHARED_DIR}/all" | sed 's/ansible_ssh_private_key: //g' | sed "s/'//g" > "/tmp/temp_ssh_key"
+  echo "Set bastion ssh configuration"
+  grep ansible_ssh_private_key -A 100 "${SHARED_DIR}/all" | sed 's/ansible_ssh_private_key: //g' | sed "s/'//g" > "/tmp/temp_ssh_key"
 
-chmod 600 "/tmp/temp_ssh_key"
+  chmod 600 "/tmp/temp_ssh_key"
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+  SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-scp ${SSH_OPTS} -i /tmp/temp_ssh_key "${BASTION_USER}@${BASTION_IP}:/tmp/${REPORTPORTAL_FILES:-}" "${SHARED_DIR}/reportportal_url" 2>/dev/null || true
+  scp ${SSH_OPTS} -i /tmp/temp_ssh_key "${BASTION_USER}@${BASTION_IP}:/tmp/${REPORTPORTAL_FILES:-}" "${SHARED_DIR}/reportportal_url" 2>/dev/null || true
+fi
 
 
 if [[ ! -f "$CLUSTER_VERSION_FILE" ]]; then

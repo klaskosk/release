@@ -17,20 +17,21 @@ chmod 600 "${PROJECT_DIR}"/temp_ssh_key
 BASTION_IP=$(grep -oP '(?<=ansible_host: ).*' "${SHARED_DIR}/bastion" | sed "s/'//g")
 BASTION_USER=$(grep -oP '(?<=ansible_user: ).*' "${SHARED_DIR}/all" | sed "s/'//g")
 
-echo "Store pahse 1 build id"
-echo "${BUILD_ID}" > "${SHARED_DIR}"/phase1_build_id
+echo "Store Phase 1 build ID"
+echo "${BUILD_ID}" > "${SHARED_DIR}/phase1_build_id"
 
-echo "Store eco-gotests artifacts on bastion host"
-echo "Run cnf-tests via ssh tunnel"
-ssh -o ServerAliveInterval=60 \
-    -o ServerAliveCountMax=3 \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    "${BASTION_USER}@${BASTION_IP}" \
-    -i /tmp/temp_ssh_key "rm -rf ~/build-artifiacts; mkdir ~/build-artifiacts; cp /tmp/downstream_report/*.xml ~/build-artifiacts/"
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key)
+echo "Save the Phase 1 JUnit reports for Phase 2"
+ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 \
+    "${SSH_OPTS[@]}" "${BASTION_USER}@${BASTION_IP}" \
+    "rm -rf ~/build-artifiacts && mkdir -m 0700 ~/build-artifiacts && cp '${REPORT_DIR}'/*.xml ~/build-artifiacts/"
 
-echo "Store SHARED_DIR content on bastion host"
-scp -r -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -i /tmp/temp_ssh_key \
-    "${SHARED_DIR}"/* "${BASTION_USER}@${BASTION_IP}":~/build-artifiacts/
+echo "Save the Phase 1 inventory and metadata"
+phase1_files=()
+for file in "${SHARED_DIR}"/*; do
+    if [[ "${file##*/}" != bastion_junit_report_dir ]]; then
+        phase1_files+=("${file}")
+    fi
+done
+scp -r "${SSH_OPTS[@]}" "${phase1_files[@]}" "${BASTION_USER}@${BASTION_IP}":~/build-artifiacts/

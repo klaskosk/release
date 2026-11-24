@@ -53,6 +53,8 @@ echo "Gather artifacts from bastion"
 # shellcheck disable=SC2154
 scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key "${BASTION_USER}"@"${BASTION_IP}":/tmp/nmd_report/nmd_report.xml "${ARTIFACT_DIR}/junit_nmd_report.xml"
 
-echo "Store report for reporter step"
-# shellcheck disable=SC2154
-cp "${ARTIFACT_DIR}/junit_nmd_report.xml" "${SHARED_DIR}/junit_nmd_report.xml"
+echo "Stage the metrics report on the bastion"
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
+  "${BASTION_USER}@${BASTION_IP}" \
+  "mkdir -p -m 0700 '${REPORT_DIR}' && cp /tmp/nmd_report/nmd_report.xml '${REPORT_DIR}/junit_nmd_report.xml'"

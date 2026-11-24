@@ -37,7 +37,7 @@ tests:
       VERSION: "4.18"
     post:
     - ref: telcov10n-functional-cnf-network-cnf-reporter
-    - ref: telcov10n-verify-junit-reports
+    - ref: telcov10n-verify-junit-reports-bastion
     - ref: telcov10n-functional-cnf-network-clone-z-stream-issue
     - ref: telcov10n-functional-cnf-network-send-slack-notification
     pre:

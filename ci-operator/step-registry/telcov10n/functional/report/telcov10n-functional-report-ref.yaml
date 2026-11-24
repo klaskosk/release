@@ -6,16 +6,8 @@ ref:
     tag: eco-ci-cd  
   commands: telcov10n-functional-report-commands.sh
   documentation: |-
-    Upload the suite JUnit reports to Report Portal.
-
-    junit_report_dir is no longer passed: processed_report_dir is the single
-    report set uploaded to Report Portal.
-
-    Lanes whose plays stage reports on the bastion upload the suite JUnit set
-    from JUNIT_REPORT_DIR (default /tmp/test_reports/junit). Lanes whose test
-    steps stage reports in SHARED_DIR upload only the staged junit_*.xml suite
-    reports; the report_*.xml aggregates are ignored because they are a lossy
-    duplicate of the same specs.
+    Upload suite JUnit XMLs from the bastion directory recorded by the test
+    steps in SHARED_DIR/bastion_junit_report_dir.
   grace_period: 10s
   timeout: 4h0m0s
   resources:
@@ -23,14 +15,6 @@ ref:
       cpu: 100m
       memory: 200Mi
   env:
-  - name: JUNIT_REPORT_DIR
-    default: "/tmp/test_reports/junit"
-    documentation: |-
-      Optional bastion directory containing the suite JUnit XMLs to upload.
-      This default is the single source of the value; the script keeps a shell
-      fallback only for runs outside CI. Lanes whose reports live elsewhere set
-      it in the job config (the O-RAN lane uses /tmp/eco_gotests_oran_junit).
-      Ignored when reports are staged in SHARED_DIR.
   - name: REPORTER_TEMPLATE_NAME
     default: "Telco 5G RAN Regression build - 4.19 - automated"
     documentation: Template name for Report Portal

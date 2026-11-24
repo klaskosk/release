@@ -62,18 +62,29 @@ chmod 600 $PROJECT_DIR/temp_ssh_key
 BASTION_IP=$(cat $ECO_CI_CD_INVENTORY_PATH/host_vars/bastion | grep -oP '(?<=ansible_host: ).*' | sed "s/'//g")
 BASTION_USER=$(cat $ECO_CI_CD_INVENTORY_PATH/group_vars/all | grep -oP '(?<=ansible_user: ).*'| sed "s/'//g")
 
-echo "Run cnf-gotests via ssh tunnel"
-ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASTION_USER@$BASTION_IP -i /tmp/temp_ssh_key "cd /tmp/cnf-gotests;./downstream-tests-run.sh || true"
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+trap 'rm -f "${PROJECT_DIR}/temp_ssh_key"' EXIT
+stage_rc=0
+echo "Run cnf-gotests on the bastion and stage suite JUnit reports"
+ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
+  "${BASTION_USER}@${BASTION_IP}" bash -s -- "${REPORT_DIR}" <<'EOF' || stage_rc=$?
+set -e
+cd /tmp/cnf-gotests
+./downstream-tests-run.sh || true
+mkdir -p -m 0700 "$1"
+shopt -s nullglob
+reports=(/tmp/downstream_report/*_suite_test.xml)
+if (( ${#reports[@]} == 0 )); then
+  echo "No cnf-gotests suite JUnit reports found" >&2
+  exit 1
+fi
+for report in "${reports[@]}"; do
+  cp "$report" "$1/junit_${report##*/}"
+done
+EOF
 
 echo "Gather artifacts from bastion"
-scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key $BASTION_USER@$BASTION_IP:/tmp/downstream_report/*.xml ${ARTIFACT_DIR}/junit_downstream/
-rm -rf $PROJECT_DIR/temp_ssh_key
-
-echo "Store suite JUnit reports for reporter step"
-# The real JUnit XMLs are the *_suite_test.xml files, as the PTP GM lane also
-# collects. The report_*.xml aggregate stays in ARTIFACT_DIR and is not staged.
-for f in "${ARTIFACT_DIR}/junit_downstream/"*_suite_test.xml; do
-  if [[ -f "$f" ]]; then
-    cp "$f" "${SHARED_DIR}/junit_$(basename "$f")"
-  fi
-done
+mkdir -p "${ARTIFACT_DIR}/junit_downstream"
+scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
+  "${BASTION_USER}@${BASTION_IP}:/tmp/downstream_report/*.xml" "${ARTIFACT_DIR}/junit_downstream/"
+exit "${stage_rc}"

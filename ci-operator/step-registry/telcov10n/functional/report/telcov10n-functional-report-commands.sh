@@ -10,6 +10,12 @@ if [ -f "${SHARED_DIR}/skip.txt" ]; then
   exit 0
 fi
 
+if [[ ! -s "${SHARED_DIR}/bastion_junit_report_dir" ]]; then
+  echo "No bastion report directory was recorded — skipping upload"
+  exit 0
+fi
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+
 echo "Create group_vars directory"
 mkdir -pv "${ECO_CI_CD_INVENTORY_PATH}/group_vars"
 
@@ -34,47 +40,6 @@ echo "CLUSTER_NAME=${CLUSTER_NAME}"
 
 KUBECONFIG="/home/telcov10n/project/generated/${CLUSTER_NAME}/auth/kubeconfig"
 
-echo "Remove report directories"
-rm -rf /tmp/reports
-
-echo "Create reports directory"
-mkdir -pv /tmp/reports
-
-# Reports are either staged in SHARED_DIR by the test steps or produced on the
-# bastion by the lane's plays. Either way Report Portal gets a single report set.
-#
-# Only the Ginkgo suite JUnit XMLs are that set. The report_*.xml aggregates
-# are ignored entirely, so a lane that stages nothing but aggregates is treated
-# as having no reports in SHARED_DIR.
-reports_in_shared_dir=false
-for f in "${SHARED_DIR}"/junit_*.xml; do
-  if [[ -f "$f" ]]; then
-    reports_in_shared_dir=true
-    break
-  fi
-done
-
-if [[ "${reports_in_shared_dir}" == "false" ]]; then
-  echo "No Reports found in ${SHARED_DIR}, Using Bastion"
-  BASTION_REPORT_DIR="/tmp/test_reports"
-  # The lane's plays stage a single suite JUnit set on the bastion. Lanes whose
-  # reports live elsewhere (e.g. O-RAN) set JUNIT_REPORT_DIR in their job config,
-  # so honour that value when it is present.
-  JUNIT_REPORT_DIR="${JUNIT_REPORT_DIR:-${BASTION_REPORT_DIR}/junit}"
-  processed_report_dir="${JUNIT_REPORT_DIR}"
-  UPLOAD_SHARED_DIR=""
-else
-  echo "Reports found in SHARED_DIR"
-  for f in "${SHARED_DIR}"/junit_*.xml; do
-    if [[ -f "$f" ]]; then
-      filename=$(basename "$f" | sed 's/^junit_//')
-      cp "$f" "/tmp/reports/${filename}"
-    fi
-  done
-  processed_report_dir="/tmp/reports"
-  UPLOAD_SHARED_DIR="${SHARED_DIR}"
-fi
-
 cd /eco-ci-cd
 
 # Launches are version-qualified so different OCP versions do not collide in
@@ -97,14 +62,19 @@ if [[ -f "${METRICS_FILE}" ]]; then
   echo "REPORTS_PORTAL_ATTRIBUTES: ${REPORTS_PORTAL_ATTRIBUTES}"
 fi
 
-echo "Uploading reports from ${processed_report_dir} to Report Portal"
-SHARED_DIR="${UPLOAD_SHARED_DIR}" ansible-playbook ./playbooks/upload-report.yaml \
+# An empty SHARED_DIR tells upload-report.yaml to read from the bastion.
+echo "Uploading reports from ${REPORT_DIR} to Report Portal"
+SHARED_DIR="" ansible-playbook ./playbooks/upload-report.yaml \
   -i ./inventories/cnf/switch-config.yaml \
   --extra-vars "kubeconfig=${KUBECONFIG} \
     reporter_template_name='${REPORTER_TEMPLATE_NAME}' \
-    processed_report_dir='${processed_report_dir}' \
+    processed_report_dir='${REPORT_DIR}' \
     reports_directory=/tmp/upload \
     reporter_launch_name='${REPORTER_LAUNCH_NAME}' \
     upload_to_report_portal=${UPLOAD_TO_REPORT_PORTAL} \
     report_portal_url_filename='${REPORTPORTAL_FILES}' \
     reports_portal_attributes='${REPORTS_PORTAL_ATTRIBUTES}'"
+
+case "${UPLOAD_TO_REPORT_PORTAL,,}" in
+  true|yes|on|1) touch "${SHARED_DIR}/report_portal_uploaded" ;;
+esac

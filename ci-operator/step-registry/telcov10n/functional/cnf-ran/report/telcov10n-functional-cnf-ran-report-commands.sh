@@ -102,3 +102,7 @@ ansible-playbook ./playbooks/upload-report.yaml \
     upload_to_report_portal=${UPLOAD_TO_REPORT_PORTAL} \
     report_portal_url_filename='${REPORTPORTAL_FILES}' \
     reports_portal_attributes='${REPORTS_PORTAL_ATTRIBUTES}'"
+
+case "${UPLOAD_TO_REPORT_PORTAL,,}" in
+  true|yes|on|1) touch "${SHARED_DIR}/report_portal_uploaded" ;;
+esac

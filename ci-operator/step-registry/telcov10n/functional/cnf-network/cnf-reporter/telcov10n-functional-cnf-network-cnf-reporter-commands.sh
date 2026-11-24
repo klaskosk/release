@@ -10,6 +10,12 @@ if [ -f "${SHARED_DIR}/skip.txt" ]; then
   exit 0
 fi
 
+if [[ ! -s "${SHARED_DIR}/bastion_junit_report_dir" ]]; then
+  echo "No bastion report directory was recorded — skipping upload"
+  exit 0
+fi
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+
 echo "Create group_vars directory"
 mkdir "${ECO_CI_CD_INVENTORY_PATH}/group_vars"
 
@@ -32,25 +38,14 @@ fi
 export CLUSTER_NAME="${CLUSTER_NAME}"
 echo CLUSTER_NAME="${CLUSTER_NAME}"
 
-echo "Remove report directory"
-rm -rf /tmp/reports
-
-echo "Create reports directory"
-mkdir /tmp/reports
-
-echo "Copy suite JUnit reports to reports directory"
-# Only the Ginkgo suite JUnit XMLs are the Report Portal report set; the
-# report_*.xml aggregates are ignored and never staged into SHARED_DIR.
-for f in "${SHARED_DIR}"/junit_*.xml; do
-  if [[ -f "$f" ]]; then
-    cp "$f" /tmp/reports/
-  fi
-done
-
 echo "Upload reports"
 cd /eco-ci-cd
 # shellcheck disable=SC2154
-ansible-playbook ./playbooks/upload-report.yaml -i ./inventories/cnf/switch-config.yaml \
+# An empty SHARED_DIR tells upload-report.yaml to read from the bastion.
+SHARED_DIR="" ansible-playbook ./playbooks/upload-report.yaml -i ./inventories/cnf/switch-config.yaml \
     --extra-vars "kubeconfig=/home/telcov10n/project/generated/${CLUSTER_NAME}/auth/kubeconfig \
-        reporter_template_name='${REPORTER_TEMPLATE_NAME}' processed_report_dir=/tmp/reports \
+        reporter_template_name='${REPORTER_TEMPLATE_NAME}' processed_report_dir='${REPORT_DIR}' \
+        report_portal_url_filename='${REPORTPORTAL_FILES}' \
         reports_directory=/tmp/upload"
+
+touch "${SHARED_DIR}/report_portal_uploaded"

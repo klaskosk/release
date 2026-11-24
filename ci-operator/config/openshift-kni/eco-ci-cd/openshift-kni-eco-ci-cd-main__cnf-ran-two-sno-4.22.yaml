@@ -54,6 +54,8 @@ tests:
       VERSION: "4.22"
       ZTP_GIT_BRANCH: two_sno
     post:
+    - ref: telcov10n-verify-junit-reports-bastion
+    - ref: telcov10n-functional-cnf-ran-send-slack-notification
     - ref: telcov10n-functional-trigger-job
     pre:
     - ref: telcov10n-functional-cnf-ran-hub-deploy
@@ -63,8 +65,6 @@ tests:
     test:
     - ref: telcov10n-functional-cnf-ran-eco-gotests-two-sno
     - ref: telcov10n-functional-report
-    - ref: telcov10n-functional-cnf-ran-send-slack-notification
-    - ref: telcov10n-verify-junit-reports
 zz_generated_metadata:
   branch: main
   org: openshift-kni

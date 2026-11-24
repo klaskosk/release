@@ -77,6 +77,9 @@ if [ ! -f "${ARTIFACT_DIR}/junit_test-result.xml" ]; then
 fi
 
 echo "Store report for reporter step"
-cp "${ARTIFACT_DIR}/junit_test-result.xml" "${SHARED_DIR}/junit_test-result.xml"
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key)
+ssh "${SSH_OPTS[@]}" "${BASTION_USER}@${BASTION_IP}" mkdir -p -m 0700 "${REPORT_DIR}"
+scp "${SSH_OPTS[@]}" "${ARTIFACT_DIR}/junit_test-result.xml" "${BASTION_USER}@${BASTION_IP}:${REPORT_DIR}/"
 
 rm -rf $PROJECT_DIR/temp_ssh_key

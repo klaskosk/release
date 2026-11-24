@@ -85,19 +85,29 @@ chmod 600 "${PROJECT_DIR}/temp_ssh_key"
 BASTION_IP=$(grep -oP '(?<=ansible_host: ).*' "${ECO_CI_CD_INVENTORY_PATH}/host_vars/bastion" | sed "s/'//g")
 BASTION_USER=$(grep -oP '(?<=ansible_user: ).*' "${ECO_CI_CD_INVENTORY_PATH}/group_vars/all" | sed "s/'//g")
 
-echo "Run eco-gotests via ssh tunnel"
-ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${BASTION_USER}@${BASTION_IP}" -i /tmp/temp_ssh_key "cd /tmp/eco_gotests;./eco-gotests-run.sh || true"
+REPORT_DIR=$(cat "${SHARED_DIR}/bastion_junit_report_dir")
+trap 'rm -f "${PROJECT_DIR}/temp_ssh_key"' EXIT
+stage_rc=0
+echo "Run eco-gotests on the bastion and stage suite JUnit reports"
+ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
+  "${BASTION_USER}@${BASTION_IP}" bash -s -- "${REPORT_DIR}" <<'EOF' || stage_rc=$?
+set -e
+cd /tmp/eco_gotests
+./eco-gotests-run.sh || true
+mkdir -p -m 0700 "$1"
+shopt -s nullglob
+reports=(report/*_suite_test_junit.xml)
+if (( ${#reports[@]} == 0 )); then
+  echo "No eco-gotests suite JUnit reports found" >&2
+  exit 1
+fi
+for report in "${reports[@]}"; do
+  cp "$report" "$1/junit_${report##*/}"
+done
+EOF
 
 echo "Gather artifacts from bastion"
-# shellcheck disable=SC2154
-scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key "${BASTION_USER}@${BASTION_IP}":/tmp/eco_gotests/report/*.xml "${ARTIFACT_DIR}/junit_eco_gotests/"
-rm -rf "${PROJECT_DIR}/temp_ssh_key"
-
-echo "Store suite JUnit report for reporter step"
-# Only the Ginkgo suite JUnit XML is reported. report_*.xml is a lossy
-# aggregate of the same specs, so it is left in ARTIFACT_DIR and not staged.
-for f in "${ARTIFACT_DIR}/junit_eco_gotests/"*suite_test_junit.xml; do
-  if [[ -f "$f" ]]; then
-    cp "$f" "${SHARED_DIR}/junit_${f##*/}"
-  fi
-done
+mkdir -p "${ARTIFACT_DIR}/junit_eco_gotests"
+scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key \
+  "${BASTION_USER}@${BASTION_IP}:/tmp/eco_gotests/report/*.xml" "${ARTIFACT_DIR}/junit_eco_gotests/"
+exit "${stage_rc}"
