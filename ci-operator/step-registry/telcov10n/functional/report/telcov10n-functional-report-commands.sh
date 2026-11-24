@@ -35,52 +35,59 @@ echo "CLUSTER_NAME=${CLUSTER_NAME}"
 KUBECONFIG="/home/telcov10n/project/generated/${CLUSTER_NAME}/auth/kubeconfig"
 
 echo "Remove report directories"
-rm -rf /tmp/reports /tmp/junit
+rm -rf /tmp/reports
 
 echo "Create reports directory"
 mkdir -pv /tmp/reports
 
-echo "Create junit directory"
-mkdir -pv /tmp/junit
+# Reports are either staged in SHARED_DIR by the test steps or produced on the
+# bastion by the lane's plays. Either way Report Portal gets a single report set.
+reports_in_shared_dir=false
+for f in "${SHARED_DIR}"/*polarion*.xml "${SHARED_DIR}"/report_*.xml "${SHARED_DIR}"/junit_*.xml; do
+  if [[ -f "$f" ]]; then
+    reports_in_shared_dir=true
+    break
+  fi
+done
 
-if ! compgen -G "${SHARED_DIR}/*polarion*.xml" > /dev/null 2>&1; then
+if [[ "${reports_in_shared_dir}" == "false" ]]; then
   echo "No Reports found in ${SHARED_DIR}, Using Bastion"
   BASTION_REPORT_DIR="/tmp/test_reports"
   # The lane's plays stage a single suite JUnit set on the bastion. Lanes whose
   # reports live elsewhere (e.g. O-RAN) set JUNIT_REPORT_DIR in their job config,
   # so honour that value when it is present.
   JUNIT_REPORT_DIR="${JUNIT_REPORT_DIR:-${BASTION_REPORT_DIR}/junit}"
-  processed_report_dir=${JUNIT_REPORT_DIR}
+  processed_report_dir="${JUNIT_REPORT_DIR}"
   UPLOAD_SHARED_DIR=""
 else
   echo "Reports found in SHARED_DIR"
-  for f in "${SHARED_DIR}"/*polarion*.xml; do
+  for f in "${SHARED_DIR}"/*polarion*.xml "${SHARED_DIR}"/report_*.xml; do
     if [[ -f "$f" ]]; then
-      filename=$(basename "$f" | sed 's/^polarion_//')
+      filename=$(basename "$f" | sed -e 's/^polarion_//' -e 's/^report_//')
       cp "$f" "/tmp/reports/${filename}"
     fi
   done
 
-  for f in "${SHARED_DIR}"/report_*.xml; do
-    if [[ -f "$f" ]]; then
-      filename=$(basename "$f" | sed 's/^report_//')
-      cp "$f" "/tmp/reports/${filename}"
-    fi
-  done
-
-  for f in "${SHARED_DIR}"/junit_*.xml; do
-    if [[ -f "$f" ]]; then
-      filename=$(basename "$f" | sed 's/^junit_//')
-      cp "$f" "/tmp/junit/${filename}"
-    fi
-  done
-  POLARION_REPORT_DIR=/tmp/reports
-  JUNIT_REPORT_DIR=/tmp/junit
-  processed_report_dir=${POLARION_REPORT_DIR}
+  # Only fall back to the JUnit staging when it is the only report set present,
+  # so lanes that stage both do not report every test twice.
+  if ! compgen -G "/tmp/reports/*.xml" > /dev/null 2>&1; then
+    for f in "${SHARED_DIR}"/junit_*.xml; do
+      if [[ -f "$f" ]]; then
+        filename=$(basename "$f" | sed 's/^junit_//')
+        cp "$f" "/tmp/reports/${filename}"
+      fi
+    done
+  fi
+  processed_report_dir="/tmp/reports"
   UPLOAD_SHARED_DIR="${SHARED_DIR}"
 fi
 
 cd /eco-ci-cd
+
+# Launches are version-qualified so different OCP versions do not collide in
+# Report Portal, but the metrics lane id must stay stable across versions. A lane
+# whose historical ci_lane differs from its launch name sets CI_LANE explicitly.
+CI_LANE="${CI_LANE:-${REPORTER_LAUNCH_NAME%-[0-9]*.[0-9]*}}"
 
 METRICS_FILE="/tmp/metrics/metrics.txt"
 
@@ -88,7 +95,7 @@ echo "Collecting metrics"
 ansible-playbook ./playbooks/collect-metrics.yml \
   -i ./inventories/cnf/switch-config.yaml \
   --extra-vars "kubeconfig=${KUBECONFIG} \
-    ci_lane='${REPORTER_LAUNCH_NAME}' \
+    ci_lane='${CI_LANE}' \
     output_file=${METRICS_FILE} \
     metrics_list=${METRICS_LIST}" || true
 
@@ -98,12 +105,12 @@ if [[ -f "${METRICS_FILE}" ]]; then
   echo "REPORTS_PORTAL_ATTRIBUTES: ${REPORTS_PORTAL_ATTRIBUTES}"
 fi
 
-echo "Uploading reports to Report Portal"
+echo "Uploading reports from ${processed_report_dir} to Report Portal"
 SHARED_DIR="${UPLOAD_SHARED_DIR}" ansible-playbook ./playbooks/upload-report.yaml \
   -i ./inventories/cnf/switch-config.yaml \
   --extra-vars "kubeconfig=${KUBECONFIG} \
     reporter_template_name='${REPORTER_TEMPLATE_NAME}' \
-    processed_report_dir=${processed_report_dir} \
+    processed_report_dir='${processed_report_dir}' \
     reports_directory=/tmp/upload \
     reporter_launch_name='${REPORTER_LAUNCH_NAME}' \
     upload_to_report_portal=${UPLOAD_TO_REPORT_PORTAL} \

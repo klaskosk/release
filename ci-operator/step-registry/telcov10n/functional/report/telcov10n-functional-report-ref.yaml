@@ -21,13 +21,20 @@ ref:
       cpu: 100m
       memory: 200Mi
   env:
+  - name: CI_LANE
+    default: ""
+    documentation: |-
+      Optional metrics ci_lane override. Defaults to REPORTER_LAUNCH_NAME with
+      any trailing -<major>.<minor> stripped. Set it only for a lane whose
+      historical ci_lane differs from its launch name.
   - name: JUNIT_REPORT_DIR
     default: "/tmp/test_reports/junit"
     documentation: |-
       Optional bastion directory containing the suite JUnit XMLs to upload.
-      Defaults to /tmp/test_reports/junit in the step script; lanes whose reports
-      live elsewhere set it in the job config (the O-RAN lane uses
-      /tmp/eco_gotests_oran_junit). Ignored when reports are staged in SHARED_DIR.
+      This default is the single source of the value; the script keeps a shell
+      fallback only for runs outside CI. Lanes whose reports live elsewhere set
+      it in the job config (the O-RAN lane uses /tmp/eco_gotests_oran_junit).
+      Ignored when reports are staged in SHARED_DIR.
   - name: REPORTER_TEMPLATE_NAME
     default: "Telco 5G RAN Regression build - 4.19 - automated"
     documentation: Template name for Report Portal
@@ -39,7 +46,10 @@ ref:
     documentation: Whether to upload reports to Report Portal
   - name: REPORTER_LAUNCH_NAME
     default: "telco-ft-ran-standard"
-    documentation: Report Portal launch name
+    documentation: |-
+      Report Portal launch name. Include the OCP version (for example
+      telco-ft-ran-ptp-4.22) so launches from different versions do not collide;
+      a trailing -<major>.<minor> is stripped for the metrics ci_lane attribute.
   - name: CLUSTER_NAME
     default: "kni-qe-99"
     documentation: Hub cluster name

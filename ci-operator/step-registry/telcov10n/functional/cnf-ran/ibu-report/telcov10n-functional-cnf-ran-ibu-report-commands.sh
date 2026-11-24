@@ -80,13 +80,18 @@ done
 
 cd /eco-ci-cd
 
+# Launches are version-qualified so different OCP versions do not collide in
+# Report Portal, but the metrics lane id must stay stable across versions. A lane
+# whose historical ci_lane differs from its launch name sets CI_LANE explicitly.
+CI_LANE="${CI_LANE:-${REPORTER_LAUNCH_NAME%-[0-9]*.[0-9]*}}"
+
 METRICS_FILE="/tmp/metrics/ran-metrics.txt"
 
 echo "Collecting metrics"
 ansible-playbook ./playbooks/collect-metrics.yml \
   -i ./inventories/cnf/switch-config.yaml \
   --extra-vars "kubeconfig=${HUB_KUBECONFIG} \
-    ci_lane='${REPORTER_LAUNCH_NAME}' \
+    ci_lane='${CI_LANE}' \
     output_file=${METRICS_FILE} \
     metrics_list=${RAN_METRICS_LIST}" || true
 

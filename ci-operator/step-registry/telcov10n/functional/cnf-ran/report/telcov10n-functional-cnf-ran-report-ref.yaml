@@ -15,6 +15,12 @@ ref:
       memory: 200Mi
 
   env:
+  - name: CI_LANE
+    default: ""
+    documentation: |-
+      Optional metrics ci_lane override. Defaults to REPORTER_LAUNCH_NAME with
+      any trailing -<major>.<minor> stripped. Set it only for a lane whose
+      historical ci_lane differs from its launch name.
   - name: REPORTER_TEMPLATE_NAME
     default: "Telco 5G RAN Regression build - 4.19 - automated"
     documentation: Template name for Report Portal
@@ -29,7 +35,10 @@ ref:
     documentation: Additional Report Portal attributes in key:value;key:value format, appended to metrics-based attributes
   - name: REPORTER_LAUNCH_NAME
     default: "telco-ft-ran-standard"
-    documentation: Report Portal launch name
+    documentation: |-
+      Report Portal launch name. Include the OCP version (for example
+      telco-ft-ran-ptp-4.22) so launches from different versions do not collide;
+      a trailing -<major>.<minor> is stripped for the metrics ci_lane attribute.
   - name: CLUSTER_NAME
     default: "kni-qe-99"
     documentation: Hub cluster name

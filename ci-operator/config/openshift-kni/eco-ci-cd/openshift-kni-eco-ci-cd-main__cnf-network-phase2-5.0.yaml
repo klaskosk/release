@@ -33,7 +33,7 @@ tests:
       FEATURES: core
       LABELS: net
       METRICS_LIST: general_ocp,sriov,ptp,fec,local_storage
-      REPORTER_LAUNCH_NAME: telco-ft-net-core
+      REPORTER_LAUNCH_NAME: telco-ft-net-core-5.0
       REPORTER_TEMPLATE_NAME: 'Telco Network 5_0 Regression - Telco Network 5.0 Regression
         Testing - Version: <version>; Build: <build>'
       REPORTPORTAL_FILES: .reportportal_url_Net_core
