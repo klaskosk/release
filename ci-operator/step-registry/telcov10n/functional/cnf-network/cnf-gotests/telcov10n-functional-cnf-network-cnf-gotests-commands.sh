@@ -69,5 +69,12 @@ echo "Gather artifacts from bastion"
 scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key $BASTION_USER@$BASTION_IP:/tmp/downstream_report/*.xml ${ARTIFACT_DIR}/junit_downstream/
 rm -rf $PROJECT_DIR/temp_ssh_key
 
-echo "Store polarion report for reporter step"
-mv ${ARTIFACT_DIR}/junit_downstream/report_polarion.xml ${SHARED_DIR}/report_polarion.xml
+echo "Store suite JUnit reports for reporter step"
+# The real JUnit XMLs are the *_suite_test.xml files, as the PTP GM lane also
+# collects. report_polarion.xml is the lossy aggregate, so it stays in
+# ARTIFACT_DIR and is not staged.
+for f in "${ARTIFACT_DIR}/junit_downstream/"*_suite_test.xml; do
+  if [[ -f "$f" ]]; then
+    cp "$f" "${SHARED_DIR}/junit_$(basename "$f")"
+  fi
+done

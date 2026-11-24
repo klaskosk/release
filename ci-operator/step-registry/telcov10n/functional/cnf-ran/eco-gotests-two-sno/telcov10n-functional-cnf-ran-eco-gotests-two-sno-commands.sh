@@ -75,11 +75,14 @@ done
 
 rm -rf "${PROJECT_DIR}/temp_ssh_key"
 
-echo "Store Polarion report for reporter step"
+echo "Store suite JUnit reports for reporter step"
 for suite in "${TEST_SUITES[@]}"; do
   artifact_dir="${ARTIFACT_DIR}/junit_eco_gotests_${suite}"
-  if [ -f "${artifact_dir}/report_testrun.xml" ]; then
-    mv "${artifact_dir}/report_testrun.xml" "${SHARED_DIR}/polarion_testrun_${suite}.xml"
-    cp "${SHARED_DIR}/polarion_testrun_${suite}.xml" "${SHARED_DIR}/junit_${suite}_suite_test_junit.xml"
-  fi
+  # Only the Ginkgo suite JUnit XMLs are reported. report_testrun.xml is a lossy
+  # aggregate of the same specs, so it is left in ARTIFACT_DIR and not staged.
+  for f in "${artifact_dir}"/*suite_test_junit.xml; do
+    if [[ -f "$f" ]]; then
+      cp "$f" "${SHARED_DIR}/junit_${suite}_suite_test_junit.xml"
+    fi
+  done
 done

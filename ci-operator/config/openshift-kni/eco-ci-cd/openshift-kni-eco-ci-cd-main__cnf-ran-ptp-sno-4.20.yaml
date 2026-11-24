@@ -25,7 +25,6 @@ tests:
   cron: 0 6 * * 6
   steps:
     env:
-      CI_LANE: telco-ft-ran-ptp
       CLUSTER_NAME: kni-qe-110
       DISABLE_INSIGHTS: "true"
       GITLAB_REPO_URL: https://gitlab.cee.redhat.com/telcov10n/ztp-site-configs-ci.git

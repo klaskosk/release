@@ -6,7 +6,7 @@ ref:
     tag: eco-ci-cd
   commands: telcov10n-functional-cnf-ran-ibu-report-commands.sh
   documentation: |-
-    Collect IBU lane metrics and upload reports to Polarion and Report Portal.
+    Collect IBU lane metrics and upload the suite JUnit reports to Report Portal.
     Targets the IBU target hub (kni-qe-109). Identical logic to the standard
     report step but with credentials and defaults configured for the IBU lane.
   grace_period: 10s
@@ -17,12 +17,6 @@ ref:
       memory: 200Mi
 
   env:
-  - name: CI_LANE
-    default: ""
-    documentation: |-
-      Optional metrics ci_lane override. Defaults to REPORTER_LAUNCH_NAME with
-      any trailing -<major>.<minor> stripped. Set it only for a lane whose
-      historical ci_lane differs from its launch name.
   - name: REPORTER_TEMPLATE_NAME
     default: "Telco 5G RAN IBU 4_20 - Telco 5G RAN IBU - <build> - 4.20"
     documentation: Template name for Report Portal

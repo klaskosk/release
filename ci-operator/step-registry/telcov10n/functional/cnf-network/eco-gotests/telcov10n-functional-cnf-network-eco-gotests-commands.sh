@@ -93,5 +93,11 @@ echo "Gather artifacts from bastion"
 scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /tmp/temp_ssh_key "${BASTION_USER}@${BASTION_IP}":/tmp/eco_gotests/report/*.xml "${ARTIFACT_DIR}/junit_eco_gotests/"
 rm -rf "${PROJECT_DIR}/temp_ssh_key"
 
-echo "Store polarion report for reporter step"
-mv "${ARTIFACT_DIR}/junit_eco_gotests/report_testrun.xml" "${SHARED_DIR}/report_testrun.xml"
+echo "Store suite JUnit report for reporter step"
+# Only the Ginkgo suite JUnit XML is reported. report_testrun.xml is a lossy
+# aggregate of the same specs, so it is left in ARTIFACT_DIR and not staged.
+for f in "${ARTIFACT_DIR}/junit_eco_gotests/"*suite_test_junit.xml; do
+  if [[ -f "$f" ]]; then
+    cp "$f" "${SHARED_DIR}/junit_${f##*/}"
+  fi
+done

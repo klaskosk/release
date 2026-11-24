@@ -15,12 +15,6 @@ ref:
       memory: 200Mi
 
   env:
-  - name: CI_LANE
-    default: ""
-    documentation: |-
-      Optional metrics ci_lane override. Defaults to REPORTER_LAUNCH_NAME with
-      any trailing -<major>.<minor> stripped. Set it only for a lane whose
-      historical ci_lane differs from its launch name.
   - name: REPORTER_TEMPLATE_NAME
     default: "Telco 5G RAN Regression build - 4.19 - automated"
     documentation: Template name for Report Portal

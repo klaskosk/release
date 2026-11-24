@@ -57,9 +57,11 @@ find "/var/host_variables/${TARGET_CLUSTER_NAME}/" -mindepth 1 -type d 2>/dev/nu
   process_inventory "$dir" "${ECO_CI_CD_INVENTORY_PATH}/host_vars/$(basename "${dir}")"
 done
 
-rm -rf /tmp/reports /tmp/junit
+rm -rf /tmp/reports
 
 mkdir -p /tmp/reports
+# The eco-gotests steps stage their suite JUnit XMLs under the legacy polarion_
+# prefix; those files are the single Report Portal report set.
 for f in "${SHARED_DIR}"/polarion_*.xml; do
   if [[ -f "$f" ]]; then
     filename=$(basename "$f" | sed 's/^polarion_//')
@@ -67,23 +69,11 @@ for f in "${SHARED_DIR}"/polarion_*.xml; do
   fi
 done
 
-mkdir -p /tmp/junit
-# Only suite reports are converter inputs; report_testrun.xml can be empty.
-for f in "${SHARED_DIR}"/junit_*suite_test_junit.xml; do
-  if [[ -f "$f" ]]; then
-    # Keep the prefix so the converter input has a different destination path
-    # from the Report Portal copy when both are staged in /tmp/upload.
-    filename=$(basename "$f")
-    cp "$f" "/tmp/junit/${filename}"
-  fi
-done
-
 cd /eco-ci-cd
 
 # Launches are version-qualified so different OCP versions do not collide in
-# Report Portal, but the metrics lane id must stay stable across versions. A lane
-# whose historical ci_lane differs from its launch name sets CI_LANE explicitly.
-CI_LANE="${CI_LANE:-${REPORTER_LAUNCH_NAME%-[0-9]*.[0-9]*}}"
+# Report Portal, but the metrics ci_lane attribute must stay versionless.
+CI_LANE="${REPORTER_LAUNCH_NAME%-[0-9]*.[0-9]*}"
 
 METRICS_FILE="/tmp/metrics/ran-metrics.txt"
 
@@ -101,13 +91,12 @@ if [[ -f "${METRICS_FILE}" ]]; then
   echo "REPORTS_PORTAL_ATTRIBUTES: ${REPORTS_PORTAL_ATTRIBUTES}"
 fi
 
-echo "Uploading reports to Polarion and Report Portal"
+echo "Uploading reports from /tmp/reports to Report Portal"
 ansible-playbook ./playbooks/upload-report.yaml \
   -i ./inventories/cnf/switch-config.yaml \
   --extra-vars "kubeconfig=${HUB_KUBECONFIG} \
     reporter_template_name='${REPORTER_TEMPLATE_NAME}' \
     processed_report_dir=/tmp/reports \
-    junit_report_dir=/tmp/junit \
     reports_directory=/tmp/upload \
     reporter_launch_name='${REPORTER_LAUNCH_NAME}' \
     upload_to_report_portal=${UPLOAD_TO_REPORT_PORTAL} \

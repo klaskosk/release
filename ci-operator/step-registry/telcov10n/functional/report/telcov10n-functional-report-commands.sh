@@ -42,6 +42,10 @@ mkdir -pv /tmp/reports
 
 # Reports are either staged in SHARED_DIR by the test steps or produced on the
 # bastion by the lane's plays. Either way Report Portal gets a single report set.
+#
+# Only the Ginkgo suite JUnit XMLs are that set. report_testrun.xml is a lossy
+# aggregate of the same specs, so the report_*/polarion_* copies of it are never
+# uploaded even when a lane still stages them.
 reports_in_shared_dir=false
 for f in "${SHARED_DIR}"/*polarion*.xml "${SHARED_DIR}"/report_*.xml "${SHARED_DIR}"/junit_*.xml; do
   if [[ -f "$f" ]]; then
@@ -61,23 +65,12 @@ if [[ "${reports_in_shared_dir}" == "false" ]]; then
   UPLOAD_SHARED_DIR=""
 else
   echo "Reports found in SHARED_DIR"
-  for f in "${SHARED_DIR}"/*polarion*.xml "${SHARED_DIR}"/report_*.xml; do
+  for f in "${SHARED_DIR}"/junit_*.xml; do
     if [[ -f "$f" ]]; then
-      filename=$(basename "$f" | sed -e 's/^polarion_//' -e 's/^report_//')
+      filename=$(basename "$f" | sed 's/^junit_//')
       cp "$f" "/tmp/reports/${filename}"
     fi
   done
-
-  # Only fall back to the JUnit staging when it is the only report set present,
-  # so lanes that stage both do not report every test twice.
-  if ! compgen -G "/tmp/reports/*.xml" > /dev/null 2>&1; then
-    for f in "${SHARED_DIR}"/junit_*.xml; do
-      if [[ -f "$f" ]]; then
-        filename=$(basename "$f" | sed 's/^junit_//')
-        cp "$f" "/tmp/reports/${filename}"
-      fi
-    done
-  fi
   processed_report_dir="/tmp/reports"
   UPLOAD_SHARED_DIR="${SHARED_DIR}"
 fi
@@ -85,9 +78,8 @@ fi
 cd /eco-ci-cd
 
 # Launches are version-qualified so different OCP versions do not collide in
-# Report Portal, but the metrics lane id must stay stable across versions. A lane
-# whose historical ci_lane differs from its launch name sets CI_LANE explicitly.
-CI_LANE="${CI_LANE:-${REPORTER_LAUNCH_NAME%-[0-9]*.[0-9]*}}"
+# Report Portal, but the metrics ci_lane attribute must stay versionless.
+CI_LANE="${REPORTER_LAUNCH_NAME%-[0-9]*.[0-9]*}"
 
 METRICS_FILE="/tmp/metrics/metrics.txt"
 

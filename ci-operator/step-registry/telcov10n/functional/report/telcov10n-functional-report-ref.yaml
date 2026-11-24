@@ -13,7 +13,9 @@ ref:
 
     Lanes whose plays stage reports on the bastion upload the suite JUnit set
     from JUNIT_REPORT_DIR (default /tmp/test_reports/junit). Lanes whose test
-    steps stage reports in SHARED_DIR keep uploading their existing report set.
+    steps stage reports in SHARED_DIR upload only the staged junit_*.xml suite
+    reports; report_testrun.xml and its report_*/polarion_* copies are skipped
+    because they are a lossy aggregate of the same specs.
   grace_period: 10s
   timeout: 4h0m0s
   resources:
@@ -21,12 +23,6 @@ ref:
       cpu: 100m
       memory: 200Mi
   env:
-  - name: CI_LANE
-    default: ""
-    documentation: |-
-      Optional metrics ci_lane override. Defaults to REPORTER_LAUNCH_NAME with
-      any trailing -<major>.<minor> stripped. Set it only for a lane whose
-      historical ci_lane differs from its launch name.
   - name: JUNIT_REPORT_DIR
     default: "/tmp/test_reports/junit"
     documentation: |-

@@ -25,7 +25,6 @@ tests:
   cron: 0 8 * * 5
   steps:
     env:
-      CI_LANE: telco-ft-ran-ptp
       CLUSTER_NAME: kni-qe-110
       DISABLE_INSIGHTS: "true"
       HUB_OPERATORS: |
