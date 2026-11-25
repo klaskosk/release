@@ -19,6 +19,7 @@ workflow:
     # ECO_GOTESTS_FEATURES)
     - ref: telcov10n-functional-cnf-ran-eco-gotests-oran
     - ref: telcov10n-functional-report
-    post:
-    - ref: telcov10n-verify-junit-reports-bastion
     - ref: telcov10n-functional-cnf-ran-send-slack-notification
+    # Reports are verified on the bastion (not copied to the CI pod SHARED_DIR)
+    # to avoid the 1 MB Kubernetes secret size limit.
+    - ref: telcov10n-verify-junit-reports-bastion
